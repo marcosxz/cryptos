@@ -1,3 +1,3 @@
-module github.com/marcosxzhang/cryptos
+module github.com/marcosxz/cryptos
 
 go 1.13
