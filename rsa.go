@@ -30,7 +30,7 @@ func RSAPKCS1Generate(bits int, privateHeaders, publicHeaders map[string]string)
 	return
 }
 
-func RSAPKCS8GeneratePKCS8(bits int, privateHeaders, publicHeaders map[string]string) (private, public []byte, err error) {
+func RSAPKCS8Generate(bits int, privateHeaders, publicHeaders map[string]string) (private, public []byte, err error) {
 	privateKey, err := rsa.GenerateKey(rand.Reader, bits)
 	if err != nil {
 		return
@@ -61,11 +61,11 @@ func rsaToMemory(private, public []byte, privateHeaders, publicHeaders map[strin
 	return private, public
 }
 
-func RSAParsePKIXPublicKey(secret []byte) (*rsa.PublicKey, error) {
-	if len(secret) == 0 {
+func RSAParsePKIXPublicKey(public []byte) (*rsa.PublicKey, error) {
+	if len(public) == 0 {
 		return nil, InvalidRSAPublicKey
 	}
-	block, _ := pem.Decode(secret)
+	block, _ := pem.Decode(public)
 	if block == nil {
 		return nil, InvalidRSAPublicKey
 	}
@@ -76,22 +76,22 @@ func RSAParsePKIXPublicKey(secret []byte) (*rsa.PublicKey, error) {
 	}
 }
 
-func RSAParsePKCS1PrivateKey(secret []byte) (*rsa.PrivateKey, error) {
-	if len(secret) == 0 {
+func RSAParsePKCS1PrivateKey(private []byte) (*rsa.PrivateKey, error) {
+	if len(private) == 0 {
 		return nil, InvalidRSAPrivateKey
 	}
-	if block, _ := pem.Decode(secret); block == nil {
+	if block, _ := pem.Decode(private); block == nil {
 		return nil, InvalidRSAPrivateKey
 	} else {
 		return x509.ParsePKCS1PrivateKey(block.Bytes)
 	}
 }
 
-func RSAParsePKCS8PrivateKey(secret []byte) (*rsa.PrivateKey, error) {
-	if len(secret) == 0 {
+func RSAParsePKCS8PrivateKey(private []byte) (*rsa.PrivateKey, error) {
+	if len(private) == 0 {
 		return nil, InvalidRSAPrivateKey
 	}
-	if block, _ := pem.Decode(secret); block == nil {
+	if block, _ := pem.Decode(private); block == nil {
 		return nil, InvalidRSAPrivateKey
 	} else {
 		key, err := x509.ParsePKCS8PrivateKey(block.Bytes)
@@ -102,40 +102,40 @@ func RSAParsePKCS8PrivateKey(secret []byte) (*rsa.PrivateKey, error) {
 	}
 }
 
-func RSAPKCS1v15Encrypt(secret, data []byte) ([]byte, error) {
-	publicKey, err := RSAParsePKIXPublicKey(secret)
+func RSAPKCS1v15Encrypt(public, data []byte) ([]byte, error) {
+	publicKey, err := RSAParsePKIXPublicKey(public)
 	if err != nil {
 		return nil, err
 	}
 	return rsa.EncryptPKCS1v15(rand.Reader, publicKey, data)
 }
 
-func RSAPKCS1Decrypt(secret, data []byte) ([]byte, error) {
-	privateKey, err := RSAParsePKCS1PrivateKey(secret)
+func RSAPKCS1Decrypt(private, data []byte) ([]byte, error) {
+	privateKey, err := RSAParsePKCS1PrivateKey(private)
 	if err != nil {
 		return nil, err
 	}
 	return rsa.DecryptPKCS1v15(rand.Reader, privateKey, data)
 }
 
-func RSAPKCS8Decrypt(secret, data []byte) ([]byte, error) {
-	privateKey, err := RSAParsePKCS8PrivateKey(secret)
+func RSAPKCS8Decrypt(private, data []byte) ([]byte, error) {
+	privateKey, err := RSAParsePKCS8PrivateKey(private)
 	if err != nil {
 		return nil, err
 	}
 	return rsa.DecryptPKCS1v15(rand.Reader, privateKey, data)
 }
 
-func RSAPKCS1Signature(hash crypto.Hash, secret, data []byte) ([]byte, error) {
-	privateKey, err := RSAParsePKCS1PrivateKey(secret)
+func RSAPKCS1Signature(hash crypto.Hash, private, data []byte) ([]byte, error) {
+	privateKey, err := RSAParsePKCS1PrivateKey(private)
 	if err != nil {
 		return nil, err
 	}
 	return RSAPKCS1v15Signature(hash, privateKey, data)
 }
 
-func RSAPKCS8Signature(hash crypto.Hash, secret, data []byte) ([]byte, error) {
-	privateKey, err := RSAParsePKCS8PrivateKey(secret)
+func RSAPKCS8Signature(hash crypto.Hash, private, data []byte) ([]byte, error) {
+	privateKey, err := RSAParsePKCS8PrivateKey(private)
 	if err != nil {
 		return nil, err
 	}
@@ -148,8 +148,8 @@ func RSAPKCS1v15Signature(hash crypto.Hash, private *rsa.PrivateKey, data []byte
 	return rsa.SignPKCS1v15(rand.Reader, private, hash, hashCase.Sum(nil))
 }
 
-func RSAPKCS1v15Verify(hash crypto.Hash, secret, data, sign []byte) error {
-	publicKey, err := RSAParsePKIXPublicKey(secret)
+func RSAPKCS1v15Verify(hash crypto.Hash, public, data, sign []byte) error {
+	publicKey, err := RSAParsePKIXPublicKey(public)
 	if err != nil {
 		return err
 	}
@@ -258,7 +258,7 @@ func RSAPKCS1v15SegmentEncrypt(secret, data []byte) ([]byte, error) {
 }
 
 // 私钥分段解密
-func RSAPKCS1SegmentDecrypt(secret, data []byte) ([]byte, error) {
+func RSAPKCS1SegmentDecrypt(private, data []byte) ([]byte, error) {
 
 	/*
 		1024位的证书，加密时最大支持117个字节，解密时为128
@@ -269,7 +269,7 @@ func RSAPKCS1SegmentDecrypt(secret, data []byte) ([]byte, error) {
 
 	// 解析证书最大解密长度
 	var maxDecLen int
-	if privateKey, err := RSAParsePKCS1PrivateKey(secret); err != nil {
+	if privateKey, err := RSAParsePKCS1PrivateKey(private); err != nil {
 		return nil, err
 	} else {
 		maxDecLen = privateKey.N.BitLen() / 8
@@ -285,14 +285,14 @@ func RSAPKCS1SegmentDecrypt(secret, data []byte) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	for i := 0; i < maxSegmentCount; i++ {
 		if dataLen-maxDecLen > 0 { // 如果当前的解密下标小于文本长度,则表示可以正常截取,否则就只能截取当前的文本长度
-			decrypt, err := RSAPKCS1Decrypt(secret, data[:maxDecLen]) // 截取本次要解密的文本并解密
+			decrypt, err := RSAPKCS1Decrypt(private, data[:maxDecLen]) // 截取本次要解密的文本并解密
 			if err != nil {
 				return nil, err
 			}
 			buffer.Write(decrypt)   // 写入加密数据
 			data = data[maxDecLen:] // 将已解密的文本剔除,留下待解密的文本
 		} else {
-			decrypt, err := RSAPKCS1Decrypt(secret, data)
+			decrypt, err := RSAPKCS1Decrypt(private, data)
 			if err != nil {
 				return nil, err
 			}
@@ -304,7 +304,7 @@ func RSAPKCS1SegmentDecrypt(secret, data []byte) ([]byte, error) {
 }
 
 // 私钥分段解密
-func RSAPKCS8SegmentDecrypt(secret, data []byte) ([]byte, error) {
+func RSAPKCS8SegmentDecrypt(public, data []byte) ([]byte, error) {
 
 	/*
 		1024位的证书，加密时最大支持117个字节，解密时为128
@@ -315,7 +315,7 @@ func RSAPKCS8SegmentDecrypt(secret, data []byte) ([]byte, error) {
 
 	// 解析证书最大解密长度
 	var maxDecLen int
-	if privateKey, err := RSAParsePKCS8PrivateKey(secret); err != nil {
+	if privateKey, err := RSAParsePKCS8PrivateKey(public); err != nil {
 		return nil, err
 	} else {
 		maxDecLen = privateKey.N.BitLen() / 8
@@ -331,14 +331,14 @@ func RSAPKCS8SegmentDecrypt(secret, data []byte) ([]byte, error) {
 	buffer := new(bytes.Buffer)
 	for i := 0; i < maxSegmentCount; i++ {
 		if dataLen-maxDecLen > 0 { // 如果当前的解密下标小于文本长度,则表示可以正常截取,否则就只能截取当前的文本长度
-			decrypt, err := RSAPKCS8Decrypt(secret, data[:maxDecLen]) // 截取本次要解密的文本并解密
+			decrypt, err := RSAPKCS8Decrypt(public, data[:maxDecLen]) // 截取本次要解密的文本并解密
 			if err != nil {
 				return nil, err
 			}
 			buffer.Write(decrypt)   // 写入加密数据
 			data = data[maxDecLen:] // 将已解密的文本剔除,留下待解密的文本
 		} else {
-			decrypt, err := RSAPKCS8Decrypt(secret, data)
+			decrypt, err := RSAPKCS8Decrypt(public, data)
 			if err != nil {
 				return nil, err
 			}
