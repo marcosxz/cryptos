@@ -12,8 +12,8 @@ var rsaTestData = []byte("" +
 	"{\"code\":\"10000\",\"msg\":\"Success\",\"out_trade_no\":\"8375247728283648\",\"qr_code\":\"dasdkjsdkljasdkljaskdas\"}" +
 	"{\"code\":\"10000\",\"msg\":\"Success\",\"out_trade_no\":\"8375247728283648\",\"qr_code\":\"dasdkjsdkljasdkljaskdas\"}")
 
-func TestGenerateRSA(t *testing.T) {
-	private, public, err := GenerateRSA(1024, nil, nil)
+func TestRSAPKCS1Generate(t *testing.T) {
+	private, public, err := RSAPKCS1Generate(1024, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -23,15 +23,15 @@ func TestGenerateRSA(t *testing.T) {
 	t.Logf("public key:%s \n", string(public))
 }
 
-func TestParseKey(t *testing.T) {
+func TestRSAParsePKCS1Key(t *testing.T) {
 
-	private, public, err := GenerateRSA(1024, nil, nil)
+	private, public, err := RSAPKCS1Generate(1024, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
-	privateKey, err := ParsePrivateKey(private)
+	privateKey, err := RSAParsePKCS1PrivateKey(private)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -39,7 +39,7 @@ func TestParseKey(t *testing.T) {
 	t.Log(privateKey.Size())
 	t.Log(privateKey.N.BitLen())
 
-	publicKey, err := ParsePublicKey(public)
+	publicKey, err := RSAParsePKIXPublicKey(public)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -48,15 +48,15 @@ func TestParseKey(t *testing.T) {
 	t.Log(publicKey.N.BitLen())
 }
 
-func TestRSAEncryptDecrypt(t *testing.T) {
+func TestRSAPKCS1EncryptDecrypt(t *testing.T) {
 
-	private, public, err := GenerateRSA(1024, nil, nil)
+	private, public, err := RSAPKCS1Generate(4096, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
-	result, err := RSAEncrypt(rsaTestData, public)
+	result, err := RSAPKCS1v15Encrypt(public, rsaTestData)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -64,7 +64,7 @@ func TestRSAEncryptDecrypt(t *testing.T) {
 
 	t.Log(string(result))
 
-	result, err = RSADecrypt(result, private)
+	result, err = RSAPKCS1Decrypt(private, result)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -73,14 +73,14 @@ func TestRSAEncryptDecrypt(t *testing.T) {
 	t.Log(string(result))
 }
 
-func TestRSASignatureVerify(t *testing.T) {
-	private, public, err := GenerateRSA(1024, nil, nil)
+func TestRSAPKCS1SignatureVerify(t *testing.T) {
+	private, public, err := RSAPKCS1Generate(1024, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
-	sign, err := RSASignature(rsaTestData, private, crypto.SHA256)
+	sign, err := RSAPKCS1Signature(crypto.SHA256, private, rsaTestData)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -88,7 +88,7 @@ func TestRSASignatureVerify(t *testing.T) {
 
 	t.Log(string(sign))
 
-	err = RSAVerify(rsaTestData, sign, public, crypto.SHA256)
+	err = RSAPKCS1v15Verify(crypto.SHA256, public, rsaTestData, sign)
 	if err != nil {
 		t.Error(err)
 		t.Log("rsa verify failed")
@@ -98,14 +98,14 @@ func TestRSASignatureVerify(t *testing.T) {
 	t.Log("rsa verify success")
 }
 
-func TestRSASegmentEncrypt(t *testing.T) {
-	private, public, err := GenerateRSA(1024, nil, nil)
+func TestRSAPKCS1SegmentEncrypt(t *testing.T) {
+	private, public, err := RSAPKCS1Generate(1024, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
 	}
 
-	result, err := RSASegmentEncrypt(rsaTestData, public)
+	result, err := RSAPKCS1v15SegmentEncrypt(public, rsaTestData)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -113,7 +113,7 @@ func TestRSASegmentEncrypt(t *testing.T) {
 
 	t.Log(string(result))
 
-	result, err = RSASegmentDecrypt(result, private)
+	result, err = RSAPKCS1SegmentDecrypt(private, result)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -124,7 +124,7 @@ func TestRSASegmentEncrypt(t *testing.T) {
 
 func TestRSAFormat(t *testing.T) {
 
-	private, public, err := GenerateRSA(1024, nil, nil)
+	private, public, err := RSAPKCS1Generate(1024, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
@@ -139,13 +139,13 @@ func TestRSAFormat(t *testing.T) {
 	t.Log(string(private))
 	t.Log(string(public))
 
-	privateKey, err := ParsePrivateKey(private)
+	privateKey, err := RSAParsePKCS1PrivateKey(private)
 	if err != nil {
 		t.Log("before rsa format parse private key error:", err)
 		var buffer = new(bytes.Buffer)
 		RSAFormat(string(private), buffer)
 		t.Log(buffer.String())
-		privateKey, err := ParsePrivateKey(buffer.Bytes())
+		privateKey, err := RSAParsePKCS1PrivateKey(buffer.Bytes())
 		if err != nil {
 			t.Log("after rsa format parse private key error:", err)
 		} else {
@@ -155,12 +155,12 @@ func TestRSAFormat(t *testing.T) {
 		t.Log("before rsa format parse private key success:", privateKey)
 	}
 
-	publicKey, err := ParsePublicKey(public)
+	publicKey, err := RSAParsePKIXPublicKey(public)
 	if err != nil {
 		t.Log("before rsa format parse public key error:", err)
 		var buffer = new(bytes.Buffer)
 		RSAFormat(string(public), buffer)
-		publicKey, err := ParsePublicKey(buffer.Bytes())
+		publicKey, err := RSAParsePKIXPublicKey(buffer.Bytes())
 		if err != nil {
 			t.Log("after rsa format parse public key error:", err)
 		} else {
@@ -172,7 +172,7 @@ func TestRSAFormat(t *testing.T) {
 }
 
 func TestRSAAddBlockType(t *testing.T) {
-	private, public, err := GenerateRSA(1024, nil, nil)
+	private, public, err := RSAPKCS1Generate(1024, nil, nil)
 	if err != nil {
 		t.Error(err)
 		t.FailNow()
