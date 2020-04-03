@@ -35,7 +35,7 @@ func AesCBCEncryptByPKCS7Padding(data, secret []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	iv := secret[:aes.BlockSize]
+	iv := secret[:block.BlockSize()]
 	padding := AesPKCS7Padding(data, block.BlockSize())
 	blockModel := cipher.NewCBCEncrypter(block, iv)
 	cipherText := make([]byte, len(padding))
@@ -48,7 +48,7 @@ func AesCBCDecryptByPKCS7UnPadding(data, secret []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	iv := secret[:aes.BlockSize]
+	iv := secret[:block.BlockSize()]
 	blockModel := cipher.NewCBCDecrypter(block, iv)
 	plantText := make([]byte, len(data))
 	blockModel.CryptBlocks(plantText, data)
@@ -63,7 +63,7 @@ func AesCBCEncryptByPKCS5Padding(data, secret []byte) ([]byte, error) {
 	}
 	blockSize := block.BlockSize()
 	padding := AesPKCS5Padding(data, blockSize)
-	iv := secret[:aes.BlockSize]
+	iv := secret[:blockSize]
 	blockMode := cipher.NewCBCEncrypter(block, iv)
 	cipherText := make([]byte, len(padding))
 	blockMode.CryptBlocks(cipherText, padding)
@@ -75,7 +75,7 @@ func AesCBCDecryptByPKCS5UnPadding(data, secret []byte) ([]byte, error) {
 	if err != nil {
 		return nil, err
 	}
-	iv := secret[:aes.BlockSize]
+	iv := secret[:block.BlockSize()]
 	blockModel := cipher.NewCBCDecrypter(block, iv)
 	plaintext := make([]byte, len(data))
 	blockModel.CryptBlocks(plaintext, data)
